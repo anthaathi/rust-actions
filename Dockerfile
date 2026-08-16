@@ -12,7 +12,7 @@ RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
       gcc-aarch64-linux-gnu gcc-mingw-w64-x86-64 git libfontconfig1-dev \
       libfreetype-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev \
       libssl-dev libxkbcommon-dev libxkbcommon-x11-dev libxml2-dev llvm-dev \
-      lzma-dev msitools patch pkg-config python3 tar unzip xz-utils zip zlib1g-dev \
+      lzma-dev msitools nodejs patch pkg-config python3 tar unzip xz-utils zip zlib1g-dev \
     && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
       | sh -s -- -y --profile minimal --default-toolchain "$RUST_TOOLCHAIN" \
     && rustup target add \
@@ -34,7 +34,8 @@ RUN chmod +x /usr/local/bin/install-arm64-dev-packages \
     && rm -f /usr/local/bin/install-arm64-dev-packages \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/*
 
-RUN cargo --version \
+RUN node --version \
+    && cargo --version \
     && rustc --version \
     && pkg-config --exists gstreamer-1.0 \
     && test -f /usr/lib/aarch64-linux-gnu/pkgconfig/gstreamer-1.0.pc \
