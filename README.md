@@ -1,24 +1,37 @@
 # Anthaathi Rust Actions
 
-Reusable setup for Anthaathi Rust CI and release builds. The action installs:
+Prebuilt Rust CI environment for Anthaathi projects. Instead of downloading Rust,
+GStreamer development packages, and cross-compilers in every job, workflows run
+inside `ghcr.io/anthaathi/rust-actions:latest`.
 
-- Rust using the minimal rustup profile (when it is not already available)
-- the requested Rust compilation target
-- native Linux GStreamer and XKB development packages for the client
-- ARM64 or MinGW cross-compilers
-- extracted ARM64 GStreamer development files for client cross-builds
-- osxcross prerequisites when requested
+The image contains:
 
-## Usage
+- Rust with native, ARM64 Linux, MinGW Windows, Intel macOS, and Apple Silicon targets
+- native and extracted ARM64 GStreamer/XKB development files
+- ARM64 and MinGW cross-compilers
+- osxcross prerequisites
+- common build tools such as Clang, CMake, pkg-config, Python, and msitools
+
+## Workflow usage
+
+Set the container on the job and then use the companion action to verify and
+configure the selected target:
 
 ```yaml
-- uses: anthaathi/rust-actions@v1
-  with:
-    crate: apps/client
-    target: aarch64-unknown-linux-gnu
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/anthaathi/rust-actions:latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: anthaathi/rust-actions@v1
+        with:
+          crate: apps/client
+          target: aarch64-unknown-linux-gnu
 ```
 
-For osxcross prerequisites:
+For osxcross:
 
 ```yaml
 - uses: anthaathi/rust-actions@v1
@@ -26,5 +39,7 @@ For osxcross prerequisites:
     mode: osxcross
 ```
 
-Supported standard targets are the native host (an empty target),
-`aarch64-unknown-linux-gnu`, and `x86_64-pc-windows-gnu`.
+The action intentionally does not run `apt-get` or install Rust. Missing tools
+cause an immediate failure so the container definition remains the single source
+of truth. The image is rebuilt automatically when its Dockerfile or provisioning
+scripts change.
