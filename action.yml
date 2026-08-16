@@ -1,0 +1,110 @@
+name: Setup Rust build environment
+description: Install Rust, cross toolchains, and native client build dependencies
+
+author: Anthaathi
+
+inputs:
+  crate:
+    description: Crate being built (apps/client or apps/edge)
+    required: false
+    default: apps/client
+  target:
+    description: Optional Rust compilation target
+    required: false
+    default: ""
+  mode:
+    description: Setup mode (standard or osxcross)
+    required: false
+    default: standard
+
+runs:
+  using: composite
+  steps:
+    - name: Install Rust
+      shell: bash
+      env:
+        TARGET: ${{ inputs.target }}
+      run: |
+        set -euo pipefail
+        if ! command -v rustup >/dev/null 2>&1; then
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.cargo/bin:$PATH"
+        fi
+        if [ -n "$TARGET" ]; then
+          rustup target add "$TARGET"
+        fi
+        rustc --version
+        cargo --version
+
+    - name: Install osxcross dependencies
+      if: inputs.mode == 'osxcross'
+      shell: bash
+      run: |
+        set -euo pipefail
+        SUDO=""
+        command -v sudo >/dev/null 2>&1 && SUDO=sudo
+        $SUDO apt-get update -qq
+        $SUDO apt-get install -y -qq \
+          clang cmake git libssl-dev libxml2-dev llvm-dev lzma-dev patch \
+          pkg-config python3 xz-utils zlib1g-dev
+
+    - name: Install Linux and cross-build dependencies
+      if: inputs.mode == 'standard'
+      shell: bash
+      env:
+        CRATE: ${{ inputs.crate }}
+        TARGET: ${{ inputs.target }}
+      run: |
+        set -euo pipefail
+        SUDO=""
+        command -v sudo >/dev/null 2>&1 && SUDO=sudo
+
+        packages=()
+        if [ "$CRATE" = "apps/client" ]; then
+          packages+=(pkg-config)
+        fi
+
+        case "$TARGET" in
+          "")
+            if [ "$CRATE" = "apps/client" ]; then
+              packages+=(
+                libgstreamer1.0-dev
+                libgstreamer-plugins-base1.0-dev
+                libxkbcommon-dev
+                libxkbcommon-x11-dev
+              )
+            fi
+            ;;
+          aarch64-unknown-linux-gnu)
+            packages+=(gcc-aarch64-linux-gnu g++-aarch64-linux-gnu)
+            echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
+            if [ "$CRATE" = "apps/client" ]; then
+              bash "$GITHUB_ACTION_PATH/scripts/install-arm64-dev-packages.sh" \
+                libgstreamer1.0-dev:arm64 \
+                libgstreamer-plugins-base1.0-dev:arm64 \
+                libxkbcommon-dev:arm64 \
+                libxkbcommon-x11-dev:arm64 \
+                libfontconfig1-dev:arm64 \
+                libfreetype-dev:arm64
+              echo "PKG_CONFIG_ALLOW_CROSS=1" >> "$GITHUB_ENV"
+              echo "PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig" >> "$GITHUB_ENV"
+            fi
+            ;;
+          x86_64-pc-windows-gnu)
+            packages+=(gcc-mingw-w64-x86-64)
+            if [ "$CRATE" = "apps/client" ]; then
+              packages+=(msitools)
+            fi
+            echo "CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc" >> "$GITHUB_ENV"
+            echo "CARGO_PROFILE_RELEASE_DEBUG_ASSERTIONS=true" >> "$GITHUB_ENV"
+            ;;
+          *)
+            echo "No OS packages configured for Rust target: $TARGET" >&2
+            ;;
+        esac
+
+        if [ "${#packages[@]}" -gt 0 ]; then
+          $SUDO apt-get update -qq
+          $SUDO apt-get install -y -qq "${packages[@]}"
+        fi
