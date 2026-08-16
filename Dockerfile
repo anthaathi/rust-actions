@@ -38,7 +38,9 @@ RUN chmod +x /usr/local/bin/install-arm64-dev-packages \
     && rm -f /usr/local/bin/install-arm64-dev-packages \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/*
 
-RUN node --version \
+RUN ln -sfn /bin/bash /bin/sh \
+    && sh -c 'set -o pipefail' \
+    && node --version \
     && cargo --version \
     && rustc --version \
     && pkg-config --exists gstreamer-1.0 \
