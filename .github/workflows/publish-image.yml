@@ -38,7 +38,7 @@ jobs:
         with:
           images: ghcr.io/anthaathi/rust-actions
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest
             type=ref,event=tag
             type=sha,prefix=sha-
       - name: Build and publish image
