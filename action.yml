@@ -63,7 +63,7 @@ runs:
             ;;
           x86_64-pc-windows-gnu)
             command -v x86_64-w64-mingw32-gcc >/dev/null
-            command -v wixl >/dev/null
+            command -v msibuild >/dev/null
             echo "CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc" >> "$GITHUB_ENV"
             echo "CARGO_PROFILE_RELEASE_DEBUG_ASSERTIONS=true" >> "$GITHUB_ENV"
             ;;
